@@ -7,10 +7,12 @@ import (
 
 	"github.com/hashicorp/terraform/plugin/proto"
 	"github.com/hashicorp/terraform/terraform"
+	"google.golang.org/grpc"
 )
 
 // terraform.ResourceProvider grpc implementation
 type GRPCResourceProvider struct {
+	conn   *grpc.ClientConn
 	client proto.ProviderClient
 }
 
@@ -198,8 +200,7 @@ func (p *GRPCResourceProvider) DataSources() []terraform.DataSource {
 }
 
 func (p *GRPCResourceProvider) Close() error {
-	//FIXME: Close!
-	return nil
+	return p.conn.Close()
 }
 
 type GRPCResourceProviderServer struct {
