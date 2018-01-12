@@ -1,3 +1,3 @@
-//go:generate protoc -I ./ provider.proto --go_out=plugins=grpc:./
+//go:generate protoc -I ./ plugin.proto --go_out=plugins=grpc:./
 
 package proto

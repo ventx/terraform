@@ -186,3 +186,15 @@ service Provider {
     rpc ValidateResource(ValidateResourceRequest) returns (ValidateResponse);
 }
 
+
+message ProvisionerApplyRequest {
+    // need to add Output
+    InstanceState state = 1;
+    ResourceConfig config = 2;
+}
+
+service Provisioner {
+    rpc Validate(ValidateRequest) returns (ValidateResponse);
+    rpc Apply(ProvisionerApplyRequest) returns (Empty);
+    rpc Stop(Empty) returns (Empty);
+}
