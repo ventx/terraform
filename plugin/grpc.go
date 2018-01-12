@@ -198,8 +198,8 @@ func (p *GRPCResourceProvider) DataSources() []terraform.DataSource {
 }
 
 func (p *GRPCResourceProvider) Close() error {
-	_, err := p.client.Close(context.TODO(), nil)
-	return err
+	//FIXME: Close!
+	return nil
 }
 
 type GRPCResourceProviderServer struct {
@@ -312,8 +312,4 @@ func (s *GRPCResourceProviderServer) ReadDataApply(_ context.Context, req *proto
 
 func (s *GRPCResourceProviderServer) DataSources(_ context.Context, _ *proto.Empty) (*proto.DataSourcesResponse, error) {
 	return proto.NewDataSourcesResponse(s.provider.DataSources()), nil
-}
-
-func (s *GRPCResourceProviderServer) Close(_ context.Context, _ *proto.Empty) (*proto.Empty, error) {
-	return nil, nil
 }

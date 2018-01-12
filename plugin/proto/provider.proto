@@ -170,7 +170,6 @@ message ValidateResourceRequest {
 
 service Provider {
     rpc Apply(ApplyRequest) returns (ApplyResponse);
-    rpc Close(Empty) returns (Empty);
     rpc Configure(ConfigureRequest) returns (Empty);
     rpc DataSources(Empty) returns (DataSourcesResponse);
     rpc Diff(DiffRequest) returns (DiffResponse);
