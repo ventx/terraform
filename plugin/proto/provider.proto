@@ -1,0 +1,189 @@
+syntax = "proto3";
+package proto;
+
+message Empty {}
+
+message InstanceInfo {
+    string id = 1;
+    string type = 2;
+    repeated string module_path = 3;
+}
+
+message InstanceState {
+    string id = 1;
+    map<string, bytes> attributes = 2;
+    EphemeralState ephemeral = 3;
+
+    // using json for now
+    bytes meta = 4;
+
+    bool tainted = 5;
+}
+
+message EphemeralState {
+    string type = 1;
+    map<string, string> conn_info = 2;
+}
+
+enum DiffAttrType {
+    UNKNOWN = 0;
+    INPUT = 1;
+    OUTPUT = 2;
+}
+
+message ResourceAttrDiff {
+    string old = 1;
+    string new = 2;
+    bool new_computed = 3;
+    bool new_removed = 4;
+    bytes new_extra = 5;
+    bool requires_new = 6;
+    bool sensitive = 7;
+    DiffAttrType type = 8;
+}
+
+message InstanceDiff {
+    map<string, ResourceAttrDiff> attributes = 1;
+    bool destroy = 2;
+    bool destroy_deposed = 3;
+    bool destroy_tainted = 4;
+    
+    // all meta is json for now
+    bytes meta = 5;
+}
+
+message ApplyRequest {
+    InstanceInfo info = 1;
+    InstanceState state = 2;
+    InstanceDiff diff = 3;
+}
+
+message ApplyResponse {
+    InstanceState state = 1;
+}
+
+message ResourceConfig {
+    repeated string computed_keys = 1;
+    map<string, bytes> raw = 2;
+    map<string, bytes> config = 3;
+}
+
+message ConfigureRequest {
+    ResourceConfig resource_config = 1;
+}
+
+message DataSourcesResponse {
+    repeated string data_sources = 1;
+}
+
+message DiffRequest {
+    InstanceInfo info = 1;
+    InstanceState state = 2;
+    ResourceConfig config = 3;
+}
+    
+message DiffResponse {
+    InstanceDiff diff = 1;
+}
+
+message GetSchemaRequest {
+    repeated string resource_types = 1;
+    repeated string data_sources = 2;
+}
+
+message GetSchemaResponse {
+    bytes schema = 1;
+}
+
+message ImportStateRequest {
+    string id = 1;
+    InstanceInfo info = 2;
+}
+
+message ImportStateResponse {
+    repeated InstanceState state = 1;
+}
+
+message InputRequest {
+    int32 id = 1;
+    ResourceConfig config = 2;
+}
+
+message InputResponse {
+    ResourceConfig config = 1;
+}
+
+message ReadDataApplyRequest {
+    InstanceInfo info = 1;
+    InstanceDiff diff = 2;
+}
+
+message ReadDataApplyResponse {
+    InstanceState state = 1;
+}
+
+message ReadDataDiffRequest {
+    InstanceInfo info = 1;
+    ResourceConfig config = 2;
+}
+
+message ReadDataDiffResponse {
+    InstanceDiff diff = 1;
+}
+
+message RefreshRequest {
+    InstanceInfo info = 1;
+    InstanceState state = 2;
+}
+
+message RefreshResponse {
+    InstanceState state = 1;
+}
+
+message ResourceType {
+    string name = 1;
+    bool importable = 2;
+}
+
+message ResourcesResponse {
+    repeated ResourceType resources = 1;
+}
+
+message ValidateRequest {
+    ResourceConfig config = 1;
+}
+
+message ValidateResponse {
+    repeated string warnings = 1;
+    repeated string errors = 2;
+}
+
+message ValidateDataSourceRequest {
+    string type = 1;
+    ResourceConfig config = 2;
+}
+
+message ValidateResourceRequest {
+    string type = 1;
+    ResourceConfig config = 2;
+}
+
+service Provider {
+    rpc Apply(ApplyRequest) returns (ApplyResponse);
+    rpc Close(Empty) returns (Empty);
+    rpc Configure(ConfigureRequest) returns (Empty);
+    rpc DataSources(Empty) returns (DataSourcesResponse);
+    rpc Diff(DiffRequest) returns (DiffResponse);
+    rpc GetSchema(GetSchemaRequest) returns  (GetSchemaResponse);
+    rpc ImportState(ImportStateRequest) returns (ImportStateResponse);
+    rpc Input(InputRequest) returns (InputResponse);
+    rpc ReadDataApply(ReadDataApplyRequest) returns (ReadDataApplyResponse);
+    rpc ReadDataDiff(ReadDataDiffRequest) returns (ReadDataDiffResponse);
+    rpc Refresh(RefreshRequest) returns (RefreshResponse);
+    rpc Resources(Empty) returns (ResourcesResponse);
+    rpc Stop(Empty) returns (Empty);
+    rpc Validate(ValidateRequest) returns (ValidateResponse);
+    rpc ValidateDataSource(ValidateDataSourceRequest) returns (ValidateResponse);
+    rpc ValidateResource(ValidateResourceRequest) returns (ValidateResponse);
+}
+
