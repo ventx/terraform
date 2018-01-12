@@ -200,6 +200,7 @@ func (p *GRPCResourceProvider) DataSources() []terraform.DataSource {
 }
 
 func (p *GRPCResourceProvider) Close() error {
+	return nil
 	return p.conn.Close()
 }
 
@@ -208,7 +209,7 @@ type GRPCResourceProviderServer struct {
 }
 
 func (s *GRPCResourceProviderServer) Stop(_ context.Context, _ *proto.Empty) (*proto.Empty, error) {
-	return nil, s.provider.Stop()
+	return new(proto.Empty), s.provider.Stop()
 }
 
 func (s *GRPCResourceProviderServer) GetSchema(_ context.Context, req *proto.GetSchemaRequest) (*proto.GetSchemaResponse, error) {
@@ -248,7 +249,7 @@ func (s *GRPCResourceProviderServer) ValidateResource(_ context.Context, req *pr
 
 func (s *GRPCResourceProviderServer) Configure(_ context.Context, req *proto.ConfigureRequest) (*proto.Empty, error) {
 	err := s.provider.Configure(req.ResourceConfig.TFResourceConfig())
-	return nil, err
+	return new(proto.Empty), err
 }
 
 func (s *GRPCResourceProviderServer) Apply(_ context.Context, req *proto.ApplyRequest) (*proto.ApplyResponse, error) {
