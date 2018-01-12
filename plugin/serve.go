@@ -19,7 +19,7 @@ var Handshake = plugin.HandshakeConfig{
 	// one or the other that makes it so that they can't safely communicate.
 	// This could be adding a new interface value, it could be how
 	// helper/schema computes diffs, etc.
-	ProtocolVersion: 4,
+	ProtocolVersion: 5,
 
 	// The magic cookie values should NEVER be changed.
 	MagicCookieKey:   "TF_PLUGIN_MAGIC_COOKIE",
@@ -41,6 +41,7 @@ func Serve(opts *ServeOpts) {
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: Handshake,
 		Plugins:         pluginMap(opts),
+		GRPCServer:      plugin.DefaultGRPCServer,
 	})
 }
 
