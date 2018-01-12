@@ -315,3 +315,53 @@ func (s *GRPCResourceProviderServer) ReadDataApply(_ context.Context, req *proto
 func (s *GRPCResourceProviderServer) DataSources(_ context.Context, _ *proto.Empty) (*proto.DataSourcesResponse, error) {
 	return proto.NewDataSourcesResponse(s.provider.DataSources()), nil
 }
+
+// terraform.ResourceProvider grpc implementation
+type GRPCResourceProvisioner struct {
+	conn   *grpc.ClientConn
+	client proto.ProvisionerClient
+}
+
+func (p *GRPCResourceProvisioner) Validate(c *terraform.ResourceConfig) ([]string, []error) {
+	req := &proto.ValidateRequest{
+		Config: proto.NewResourceConfig(c),
+	}
+	resp, err := p.client.Validate(context.TODO(), req)
+	if err != nil {
+		return nil, []error{err}
+	}
+
+	return resp.Warnings, resp.ErrorList()
+}
+
+func (p *GRPCResourceProvisioner) Apply(out terraform.UIOutput, s *terraform.InstanceState, c *terraform.ResourceConfig) error {
+	req := &proto.ProvisionerApplyRequest{
+		State:  proto.NewInstanceState(s),
+		Config: proto.NewResourceConfig(c),
+	}
+
+	_, err := p.client.Apply(context.TODO(), req)
+	return err
+}
+
+func (p *GRPCResourceProvisioner) Stop() error {
+	_, err := p.client.Stop(context.TODO(), nil)
+	return err
+}
+
+type GRPCResourceProvisionerServer struct {
+	provisioner terraform.ResourceProvisioner
+}
+
+func (s *GRPCResourceProvisionerServer) Validate(_ context.Context, req *proto.ValidateRequest) (*proto.ValidateResponse, error) {
+	w, e := s.provisioner.Validate(req.Config.TFResourceConfig())
+	return proto.NewValidateResponse(w, e), nil
+}
+
+func (s *GRPCResourceProvisionerServer) Apply(_ context.Context, req *proto.ProvisionerApplyRequest) (*proto.Empty, error) {
+	return new(proto.Empty), s.provisioner.Apply(&terraform.MockUIOutput{}, req.State.TFInstanceState(), req.Config.TFResourceConfig())
+}
+
+func (s *GRPCResourceProvisionerServer) Stop(_ context.Context, _ *proto.Empty) (*proto.Empty, error) {
+	return new(proto.Empty), s.provisioner.Stop()
+}

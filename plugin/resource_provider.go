@@ -25,6 +25,11 @@ func (p *ResourceProviderPlugin) Client(
 }
 
 func (p *ResourceProviderPlugin) GRPCServer(s *grpc.Server) error {
+	// TODO: go-plugin always registers all grpc plugins. Refactor
+	// terraform/plugin to not include both types when executing.
+	if p.F == nil {
+		return nil
+	}
 	proto.RegisterProviderServer(s, &GRPCResourceProviderServer{provider: p.F()})
 	return nil
 }

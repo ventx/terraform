@@ -24,7 +24,7 @@ func ClientConfig(m discovery.PluginMeta) *plugin.ClientConfig {
 		Managed:          true,
 		Plugins:          PluginMap,
 		Logger:           logger,
-		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
+		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC, plugin.ProtocolNetRPC},
 	}
 }
 
