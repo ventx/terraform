@@ -105,12 +105,16 @@ message ImportStateResponse {
 }
 
 message InputRequest {
-    int32 id = 1;
-    ResourceConfig config = 2;
+    ResourceConfig resource_config = 2;
+    string reply = 3;
 }
 
 message InputResponse {
-    ResourceConfig config = 1;
+    string id = 1;
+    string query = 2;
+    string description = 3;
+    string default = 4;
+    ResourceConfig resource_config = 5;
 }
 
 message ReadDataApplyRequest {
@@ -175,7 +179,7 @@ service Provider {
     rpc Diff(DiffRequest) returns (DiffResponse);
     rpc GetSchema(GetSchemaRequest) returns  (GetSchemaResponse);
     rpc ImportState(ImportStateRequest) returns (ImportStateResponse);
-    rpc Input(InputRequest) returns (InputResponse);
+    rpc Input(stream InputRequest) returns (stream InputResponse);
     rpc ReadDataApply(ReadDataApplyRequest) returns (ReadDataApplyResponse);
     rpc ReadDataDiff(ReadDataDiffRequest) returns (ReadDataDiffResponse);
     rpc Refresh(RefreshRequest) returns (RefreshResponse);
@@ -193,8 +197,12 @@ message ProvisionerApplyRequest {
     ResourceConfig config = 2;
 }
 
+message UIOutput {
+    string Message = 1;
+}
+
 service Provisioner {
     rpc Validate(ValidateRequest) returns (ValidateResponse);
-    rpc Apply(ProvisionerApplyRequest) returns (Empty);
+    rpc Apply(ProvisionerApplyRequest) returns (stream UIOutput);
     rpc Stop(Empty) returns (Empty);
 }

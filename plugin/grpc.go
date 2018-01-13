@@ -40,8 +40,55 @@ func (p *GRPCResourceProvider) GetSchema(req *terraform.ProviderSchemaRequest) (
 }
 
 func (p *GRPCResourceProvider) Input(input terraform.UIInput, c *terraform.ResourceConfig) (*terraform.ResourceConfig, error) {
-	// FIXME: need Input
-	return c, nil
+	req := &proto.InputRequest{
+		ResourceConfig: proto.NewResourceConfig(c),
+	}
+
+	// Open an input stream with the plugin
+	inputClient, err := p.client.Input(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := inputClient.Send(req); err != nil {
+		return nil, err
+	}
+
+	// remove the config, since further requests are input replies
+	req.ResourceConfig = nil
+
+	// accept input until we get a ResourceConfig
+	var rc *terraform.ResourceConfig
+	for {
+		resp, err := inputClient.Recv()
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.ResourceConfig != nil {
+			rc = resp.ResourceConfig.TFResourceConfig()
+			break
+		}
+
+		opts := &terraform.InputOpts{
+			Id:          resp.Id,
+			Query:       resp.Query,
+			Description: resp.Description,
+			Default:     resp.Default,
+		}
+
+		userInput, err := input.Input(opts)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Reply = userInput
+		if err := inputClient.Send(req); err != nil {
+			return nil, err
+		}
+	}
+
+	return rc, nil
 }
 
 func (p *GRPCResourceProvider) Validate(c *terraform.ResourceConfig) ([]string, []error) {
@@ -232,9 +279,44 @@ func (s *GRPCResourceProviderServer) GetSchema(_ context.Context, req *proto.Get
 
 }
 
-func (s *GRPCResourceProviderServer) Input(_ context.Context, req *proto.InputRequest) (*proto.InputResponse, error) {
-	//FIXME: need input!?!?!
-	return nil, nil
+func (s *GRPCResourceProviderServer) Input(server proto.Provider_InputServer) error {
+	req, err := server.Recv()
+	if err != nil {
+		return err
+	}
+
+	rc := req.ResourceConfig.TFResourceConfig()
+	rc, err = s.provider.Input(&grpcInputServer{server: server}, rc)
+	if err != nil {
+		return err
+	}
+
+	return server.Send(&proto.InputResponse{ResourceConfig: proto.NewResourceConfig(rc)})
+}
+
+type grpcInputServer struct {
+	server         proto.Provider_InputServer
+	resourceConfig *terraform.ResourceConfig
+}
+
+func (s *grpcInputServer) Input(opts *terraform.InputOpts) (string, error) {
+	resp := &proto.InputResponse{
+		Id:          opts.Id,
+		Query:       opts.Query,
+		Description: opts.Description,
+		Default:     opts.Default,
+	}
+
+	if err := s.server.Send(resp); err != nil {
+		return "", err
+	}
+
+	req, err := s.server.Recv()
+	if err != nil {
+		return "", err
+	}
+
+	return req.Reply, nil
 }
 
 func (s *GRPCResourceProviderServer) Validate(_ context.Context, req *proto.ValidateRequest) (*proto.ValidateResponse, error) {
@@ -340,8 +422,20 @@ func (p *GRPCResourceProvisioner) Apply(out terraform.UIOutput, s *terraform.Ins
 		Config: proto.NewResourceConfig(c),
 	}
 
-	_, err := p.client.Apply(context.TODO(), req)
-	return err
+	outputClient, err := p.client.Apply(context.TODO(), req)
+	if err != nil {
+		return err
+	}
+
+	for {
+		output, err := outputClient.Recv()
+		if err != nil {
+			return err
+		}
+		out.Output(output.Message)
+	}
+
+	return nil
 }
 
 func (p *GRPCResourceProvisioner) Stop() error {
@@ -358,10 +452,18 @@ func (s *GRPCResourceProvisionerServer) Validate(_ context.Context, req *proto.V
 	return proto.NewValidateResponse(w, e), nil
 }
 
-func (s *GRPCResourceProvisionerServer) Apply(_ context.Context, req *proto.ProvisionerApplyRequest) (*proto.Empty, error) {
-	return new(proto.Empty), s.provisioner.Apply(&terraform.MockUIOutput{}, req.State.TFInstanceState(), req.Config.TFResourceConfig())
+func (s *GRPCResourceProvisionerServer) Apply(req *proto.ProvisionerApplyRequest, server proto.Provisioner_ApplyServer) error {
+	return s.provisioner.Apply(&grpcOutputServer{server: server}, req.State.TFInstanceState(), req.Config.TFResourceConfig())
 }
 
 func (s *GRPCResourceProvisionerServer) Stop(_ context.Context, _ *proto.Empty) (*proto.Empty, error) {
 	return new(proto.Empty), s.provisioner.Stop()
+}
+
+type grpcOutputServer struct {
+	server proto.Provisioner_ApplyServer
+}
+
+func (s *grpcOutputServer) Output(msg string) {
+	s.server.Send(&proto.UIOutput{Message: msg})
 }

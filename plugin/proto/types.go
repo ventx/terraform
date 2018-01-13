@@ -13,6 +13,10 @@ import (
 // TF* methods return a terraform type from a protobuf type.
 
 func NewResourceConfig(c *terraform.ResourceConfig) *ResourceConfig {
+	if c == nil {
+		return nil
+	}
+
 	raw := make(map[string][]byte)
 	config := make(map[string][]byte)
 
@@ -71,6 +75,9 @@ func (c *ResourceConfig) TFResourceConfig() *terraform.ResourceConfig {
 }
 
 func NewInstanceInfo(i *terraform.InstanceInfo) *InstanceInfo {
+	if i == nil {
+		return nil
+	}
 	return &InstanceInfo{
 		Id:         i.Id,
 		Type:       i.Type,
@@ -104,6 +111,10 @@ func (s *EphemeralState) TFEphemeralState() terraform.EphemeralState {
 }
 
 func NewInstanceState(s *terraform.InstanceState) *InstanceState {
+	if s == nil {
+		return nil
+	}
+
 	attrs := make(map[string][]byte)
 
 	// these may hold more info in the future, but for now they are just strings
@@ -154,6 +165,10 @@ func (s *InstanceState) TFInstanceState() *terraform.InstanceState {
 }
 
 func NewResourceAttrDiff(d *terraform.ResourceAttrDiff) *ResourceAttrDiff {
+	if d == nil {
+		return nil
+	}
+
 	newExtra, err := json.Marshal(d.NewExtra)
 	if err != nil {
 		panic(err)
@@ -197,6 +212,10 @@ func (d *ResourceAttrDiff) TFResourceAttrDiff() *terraform.ResourceAttrDiff {
 }
 
 func NewInstanceDiff(d *terraform.InstanceDiff) *InstanceDiff {
+	if d == nil {
+		return nil
+	}
+
 	attrs := make(map[string]*ResourceAttrDiff)
 	for k, attr := range d.Attributes {
 		attrs[k] = NewResourceAttrDiff(attr)

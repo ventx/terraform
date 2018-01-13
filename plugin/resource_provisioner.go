@@ -34,7 +34,10 @@ func (p *ResourceProvisionerPlugin) GRPCServer(s *grpc.Server) error {
 }
 
 func (p *ResourceProvisionerPlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
-	return &GRPCResourceProvisioner{conn: c, client: proto.NewProvisionerClient(c)}, nil
+	return &GRPCResourceProvisioner{
+		conn:   c,
+		client: proto.NewProvisionerClient(c),
+	}, nil
 }
 
 // ResourceProvisioner is an implementation of terraform.ResourceProvisioner
