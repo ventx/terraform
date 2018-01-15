@@ -12,65 +12,63 @@ import (
 // New* function take a terraform type and return a protobuf type
 // TF* methods return a terraform type from a protobuf type.
 
+// marshalMap marshals the interface{}s into json to ensure that the payload is
+// serializable over grpc
+func marshalMap(m map[string]interface{}) map[string][]byte {
+	if m == nil {
+		return nil
+	}
+
+	n := make(map[string][]byte)
+	for k, v := range m {
+		js, err := json.Marshal(v)
+		if err != nil {
+			panic(err)
+		}
+		n[k] = js
+	}
+
+	return n
+}
+
+// unmarshalMap unmarshals the json data into an empty interface{} for use in
+// the terraform package
+func unmarshalMap(m map[string][]byte) map[string]interface{} {
+	if m == nil {
+		return nil
+	}
+
+	n := make(map[string]interface{})
+
+	for k, v := range m {
+		var i interface{}
+		err := json.Unmarshal(v, &i)
+		if err != nil {
+			panic(err)
+		}
+		n[k] = i
+	}
+
+	return n
+}
+
 func NewResourceConfig(c *terraform.ResourceConfig) *ResourceConfig {
 	if c == nil {
 		return nil
 	}
 
-	raw := make(map[string][]byte)
-	config := make(map[string][]byte)
-
-	for k, v := range c.Raw {
-		js, err := json.Marshal(v)
-		if err != nil {
-			panic(err)
-		}
-		raw[k] = js
-	}
-
-	for k, v := range c.Config {
-		js, err := json.Marshal(v)
-		if err != nil {
-			panic(err)
-		}
-		config[k] = js
-	}
-
 	return &ResourceConfig{
 		ComputedKeys: c.ComputedKeys,
-		Raw:          raw,
-		Config:       config,
+		Raw:          marshalMap(c.Raw),
+		Config:       marshalMap(c.Config),
 	}
 }
 
 func (c *ResourceConfig) TFResourceConfig() *terraform.ResourceConfig {
-	raw := make(map[string]interface{})
-	config := make(map[string]interface{})
-
-	for k, v := range c.Raw {
-		var i interface{}
-		err := json.Unmarshal(v, &i)
-		if err != nil {
-			panic(err)
-		}
-
-		raw[k] = i
-	}
-
-	for k, v := range c.Config {
-		var i interface{}
-		err := json.Unmarshal(v, &i)
-		if err != nil {
-			panic(err)
-		}
-
-		config[k] = i
-	}
-
 	return &terraform.ResourceConfig{
 		ComputedKeys: c.ComputedKeys,
-		Raw:          raw,
-		Config:       config,
+		Raw:          unmarshalMap(c.Raw),
+		Config:       unmarshalMap(c.Config),
 	}
 }
 
@@ -141,7 +139,10 @@ func (s *InstanceState) TFInstanceState() *terraform.InstanceState {
 		return nil
 	}
 
-	attrs := make(map[string]string)
+	var attrs map[string]string
+	if s.Attributes != nil {
+		attrs = make(map[string]string)
+	}
 
 	for k, v := range s.Attributes {
 		attrs[k] = string(v)
@@ -216,7 +217,11 @@ func NewInstanceDiff(d *terraform.InstanceDiff) *InstanceDiff {
 		return nil
 	}
 
-	attrs := make(map[string]*ResourceAttrDiff)
+	// make sure nil is conveyed
+	var attrs map[string]*ResourceAttrDiff
+	if d.Attributes != nil {
+		attrs = make(map[string]*ResourceAttrDiff)
+	}
 	for k, attr := range d.Attributes {
 		attrs[k] = NewResourceAttrDiff(attr)
 	}
@@ -240,7 +245,11 @@ func (d *InstanceDiff) TFInstanceDiff() *terraform.InstanceDiff {
 		return nil
 	}
 
-	attrs := make(map[string]*terraform.ResourceAttrDiff)
+	// make sure nil is conveyed
+	var attrs map[string]*terraform.ResourceAttrDiff
+	if d.Attributes != nil {
+		attrs = make(map[string]*terraform.ResourceAttrDiff)
+	}
 	for k, attr := range d.Attributes {
 		attrs[k] = attr.TFResourceAttrDiff()
 	}
@@ -342,7 +351,7 @@ func NewValidateResponse(w []string, e []error) *ValidateResponse {
 // ErrorList is a convenience method to convert the array of protobuf Error
 // messages to a Go []error.
 func (r *ValidateResponse) ErrorList() []error {
-	if r == nil {
+	if r == nil || len(r.Errors) == 0 {
 		return nil
 	}
 
