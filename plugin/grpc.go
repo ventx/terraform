@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 
 	"github.com/hashicorp/terraform/plugin/proto"
@@ -17,8 +18,8 @@ type GRPCResourceProvider struct {
 }
 
 func (p *GRPCResourceProvider) Stop() error {
-	_, err := p.client.Stop(context.TODO(), nil)
-	return err
+	_, err := p.client.Stop(context.TODO(), new(proto.Empty))
+	return grpcErr(err)
 }
 
 func (p *GRPCResourceProvider) GetSchema(req *terraform.ProviderSchemaRequest) (*terraform.ProviderSchema, error) {
@@ -28,7 +29,7 @@ func (p *GRPCResourceProvider) GetSchema(req *terraform.ProviderSchemaRequest) (
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	var s terraform.ProviderSchema
@@ -47,11 +48,11 @@ func (p *GRPCResourceProvider) Input(input terraform.UIInput, c *terraform.Resou
 	// Open an input stream with the plugin
 	inputClient, err := p.client.Input(context.TODO())
 	if err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	if err := inputClient.Send(req); err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	// remove the config, since further requests are input replies
@@ -62,7 +63,7 @@ func (p *GRPCResourceProvider) Input(input terraform.UIInput, c *terraform.Resou
 	for {
 		resp, err := inputClient.Recv()
 		if err != nil {
-			return nil, err
+			return nil, grpcErr(err)
 		}
 
 		if resp.ResourceConfig != nil {
@@ -79,12 +80,12 @@ func (p *GRPCResourceProvider) Input(input terraform.UIInput, c *terraform.Resou
 
 		userInput, err := input.Input(opts)
 		if err != nil {
-			return nil, err
+			return nil, grpcErr(err)
 		}
 
 		req.Reply = userInput
 		if err := inputClient.Send(req); err != nil {
-			return nil, err
+			return nil, grpcErr(err)
 		}
 	}
 
@@ -97,7 +98,7 @@ func (p *GRPCResourceProvider) Validate(c *terraform.ResourceConfig) ([]string, 
 	}
 	resp, err := p.client.Validate(context.TODO(), req)
 	if err != nil {
-		return nil, []error{err}
+		return nil, []error{grpcErr(err)}
 	}
 
 	return resp.Warnings, resp.ErrorList()
@@ -112,7 +113,7 @@ func (p *GRPCResourceProvider) ValidateResource(t string, c *terraform.ResourceC
 
 	resp, err := p.client.ValidateResource(context.TODO(), req)
 	if err != nil {
-		return nil, []error{err}
+		return nil, []error{grpcErr(err)}
 	}
 
 	return resp.Warnings, resp.ErrorList()
@@ -124,7 +125,7 @@ func (p *GRPCResourceProvider) Configure(c *terraform.ResourceConfig) error {
 	}
 
 	_, err := p.client.Configure(context.TODO(), req)
-	return err
+	return grpcErr(err)
 }
 
 func (p *GRPCResourceProvider) Apply(info *terraform.InstanceInfo, s *terraform.InstanceState, d *terraform.InstanceDiff) (*terraform.InstanceState, error) {
@@ -136,7 +137,7 @@ func (p *GRPCResourceProvider) Apply(info *terraform.InstanceInfo, s *terraform.
 
 	resp, err := p.client.Apply(context.TODO(), req)
 	if err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	return resp.State.TFInstanceState(), nil
@@ -151,7 +152,7 @@ func (p *GRPCResourceProvider) Diff(info *terraform.InstanceInfo, s *terraform.I
 
 	resp, err := p.client.Diff(context.TODO(), req)
 	if err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	return resp.Diff.TFInstanceDiff(), nil
@@ -165,7 +166,7 @@ func (p *GRPCResourceProvider) ValidateDataSource(t string, c *terraform.Resourc
 
 	resp, err := p.client.ValidateDataSource(context.TODO(), req)
 	if err != nil {
-		return nil, []error{err}
+		return nil, []error{grpcErr(err)}
 	}
 
 	return resp.Warnings, resp.ErrorList()
@@ -179,7 +180,7 @@ func (p *GRPCResourceProvider) Refresh(info *terraform.InstanceInfo, s *terrafor
 
 	resp, err := p.client.Refresh(context.TODO(), req)
 	if err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	return resp.State.TFInstanceState(), nil
@@ -193,14 +194,14 @@ func (p *GRPCResourceProvider) ImportState(info *terraform.InstanceInfo, id stri
 
 	resp, err := p.client.ImportState(context.TODO(), req)
 	if err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	return resp.TFInstanceStates(), nil
 }
 
 func (p *GRPCResourceProvider) Resources() []terraform.ResourceType {
-	resp, err := p.client.Resources(context.TODO(), nil)
+	resp, err := p.client.Resources(context.TODO(), new(proto.Empty))
 	if err != nil {
 		log.Println("[ERROR]", err)
 		return nil
@@ -217,7 +218,7 @@ func (p *GRPCResourceProvider) ReadDataDiff(info *terraform.InstanceInfo, c *ter
 
 	resp, err := p.client.ReadDataDiff(context.TODO(), req)
 	if err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	return resp.Diff.TFInstanceDiff(), nil
@@ -231,14 +232,14 @@ func (p *GRPCResourceProvider) ReadDataApply(info *terraform.InstanceInfo, d *te
 
 	resp, err := p.client.ReadDataApply(context.TODO(), req)
 	if err != nil {
-		return nil, err
+		return nil, grpcErr(err)
 	}
 
 	return resp.State.TFInstanceState(), nil
 }
 
 func (p *GRPCResourceProvider) DataSources() []terraform.DataSource {
-	resp, err := p.client.DataSources(context.TODO(), nil)
+	resp, err := p.client.DataSources(context.TODO(), new(proto.Empty))
 	if err != nil {
 		log.Println("[ERROR]", err)
 	}
@@ -247,7 +248,6 @@ func (p *GRPCResourceProvider) DataSources() []terraform.DataSource {
 }
 
 func (p *GRPCResourceProvider) Close() error {
-	return nil
 	return p.conn.Close()
 }
 
@@ -410,7 +410,7 @@ func (p *GRPCResourceProvisioner) Validate(c *terraform.ResourceConfig) ([]strin
 	}
 	resp, err := p.client.Validate(context.TODO(), req)
 	if err != nil {
-		return nil, []error{err}
+		return nil, []error{grpcErr(err)}
 	}
 
 	return resp.Warnings, resp.ErrorList()
@@ -424,23 +424,32 @@ func (p *GRPCResourceProvisioner) Apply(out terraform.UIOutput, s *terraform.Ins
 
 	outputClient, err := p.client.Apply(context.TODO(), req)
 	if err != nil {
-		return err
+		return grpcErr(err)
 	}
 
 	for {
 		output, err := outputClient.Recv()
-		if err != nil {
-			return err
+		if output != nil {
+			out.Output(output.Message)
 		}
-		out.Output(output.Message)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return grpcErr(err)
+		}
 	}
 
 	return nil
 }
 
 func (p *GRPCResourceProvisioner) Stop() error {
-	_, err := p.client.Stop(context.TODO(), nil)
-	return err
+	_, err := p.client.Stop(context.TODO(), new(proto.Empty))
+	return grpcErr(err)
+}
+
+func (p *GRPCResourceProvisioner) Close() error {
+	return p.conn.Close()
 }
 
 type GRPCResourceProvisionerServer struct {
