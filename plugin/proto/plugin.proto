@@ -192,7 +192,6 @@ service Provider {
 
 
 message ProvisionerApplyRequest {
-    // need to add Output
     InstanceState state = 1;
     ResourceConfig config = 2;
 }

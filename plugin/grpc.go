@@ -247,8 +247,9 @@ func (p *GRPCResourceProvider) DataSources() []terraform.DataSource {
 	return resp.TFDataSources()
 }
 
+// closing the grpc connection is final, and terraform will call it at the end of every phase.
 func (p *GRPCResourceProvider) Close() error {
-	return p.conn.Close()
+	return nil
 }
 
 type GRPCResourceProviderServer struct {
@@ -449,7 +450,7 @@ func (p *GRPCResourceProvisioner) Stop() error {
 }
 
 func (p *GRPCResourceProvisioner) Close() error {
-	return p.conn.Close()
+	return nil
 }
 
 type GRPCResourceProvisionerServer struct {
