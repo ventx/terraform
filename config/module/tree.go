@@ -198,6 +198,7 @@ func (t *Tree) getChildren(s *Storage) (map[string]*Tree, error) {
 
 	// Go through all the modules and get the directory for them.
 	for _, m := range t.Modules() {
+		log.Printf("[INFO] [MODULE_BACKEND] module name: %q", m.Name)
 		if _, ok := children[m.Name]; ok {
 			return nil, fmt.Errorf(
 				"module %s: duplicated. module names must be unique", m.Name)
