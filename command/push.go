@@ -146,6 +146,13 @@ func (c *PushCommand) Run(args []string) int {
 		return 1
 	}
 
+	defer func() {
+		err := opReq.StateLocker.Unlock(nil)
+		if err != nil {
+			c.Ui.Error(err.Error())
+		}
+	}()
+
 	// Get the configuration
 	config := ctx.Module().Config()
 	if name == "" {
@@ -393,7 +400,7 @@ Options:
   -vcs=true            If true (default), push will upload only files
                        committed to your VCS, if detected.
 
-  -no-color           If specified, output won't contain any color.
+  -no-color            If specified, output won't contain any color.
 
 `
 	return strings.TrimSpace(helpText)

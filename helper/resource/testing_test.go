@@ -45,6 +45,15 @@ func (p *resetProvider) TestReset() error {
 	return p.TestResetError
 }
 
+func TestParallelTest(t *testing.T) {
+	mt := new(mockT)
+	ParallelTest(mt, TestCase{})
+
+	if !mt.ParallelCalled {
+		t.Fatal("Parallel() not called")
+	}
+}
+
 func TestTest(t *testing.T) {
 	mp := &resetProvider{
 		MockResourceProvider: testProvider(),
@@ -111,6 +120,9 @@ func TestTest(t *testing.T) {
 
 	if mt.failed() {
 		t.Fatalf("test failed: %s", mt.failMessage())
+	}
+	if mt.ParallelCalled {
+		t.Fatal("Parallel() called")
 	}
 	if !checkStep {
 		t.Fatal("didn't call check for step")
@@ -692,12 +704,13 @@ func TestComposeTestCheckFunc(t *testing.T) {
 
 // mockT implements TestT for testing
 type mockT struct {
-	ErrorCalled bool
-	ErrorArgs   []interface{}
-	FatalCalled bool
-	FatalArgs   []interface{}
-	SkipCalled  bool
-	SkipArgs    []interface{}
+	ErrorCalled    bool
+	ErrorArgs      []interface{}
+	FatalCalled    bool
+	FatalArgs      []interface{}
+	ParallelCalled bool
+	SkipCalled     bool
+	SkipArgs       []interface{}
 
 	f bool
 }
@@ -712,6 +725,10 @@ func (t *mockT) Fatal(args ...interface{}) {
 	t.FatalCalled = true
 	t.FatalArgs = args
 	t.f = true
+}
+
+func (t *mockT) Parallel() {
+	t.ParallelCalled = true
 }
 
 func (t *mockT) Skip(args ...interface{}) {
@@ -909,6 +926,85 @@ func TestTest_Main(t *testing.T) {
 
 func mockSweeperFunc(s string) error {
 	return nil
+}
+
+func TestTest_Taint(t *testing.T) {
+	mp := testProvider()
+	mp.DiffFn = func(
+		_ *terraform.InstanceInfo,
+		state *terraform.InstanceState,
+		_ *terraform.ResourceConfig,
+	) (*terraform.InstanceDiff, error) {
+		return &terraform.InstanceDiff{
+			DestroyTainted: state.Tainted,
+		}, nil
+	}
+
+	mp.ApplyFn = func(
+		info *terraform.InstanceInfo,
+		state *terraform.InstanceState,
+		diff *terraform.InstanceDiff,
+	) (*terraform.InstanceState, error) {
+		var id string
+		switch {
+		case diff.Destroy && !diff.DestroyTainted:
+			return nil, nil
+		case diff.DestroyTainted:
+			id = "tainted"
+		default:
+			id = "not_tainted"
+		}
+
+		return &terraform.InstanceState{
+			ID: id,
+		}, nil
+	}
+
+	mp.RefreshFn = func(
+		_ *terraform.InstanceInfo,
+		state *terraform.InstanceState,
+	) (*terraform.InstanceState, error) {
+		return state, nil
+	}
+
+	mt := new(mockT)
+	Test(mt, TestCase{
+		Providers: map[string]terraform.ResourceProvider{
+			"test": mp,
+		},
+		Steps: []TestStep{
+			TestStep{
+				Config: testConfigStr,
+				Check: func(s *terraform.State) error {
+					rs := s.RootModule().Resources["test_instance.foo"]
+					if rs.Primary.ID != "not_tainted" {
+						return fmt.Errorf("expected not_tainted, got %s", rs.Primary.ID)
+					}
+					return nil
+				},
+			},
+			TestStep{
+				Taint:  []string{"test_instance.foo"},
+				Config: testConfigStr,
+				Check: func(s *terraform.State) error {
+					rs := s.RootModule().Resources["test_instance.foo"]
+					if rs.Primary.ID != "tainted" {
+						return fmt.Errorf("expected tainted, got %s", rs.Primary.ID)
+					}
+					return nil
+				},
+			},
+			TestStep{
+				Taint:       []string{"test_instance.fooo"},
+				Config:      testConfigStr,
+				ExpectError: regexp.MustCompile("resource \"test_instance.fooo\" not found in state"),
+			},
+		},
+	})
+
+	if mt.failed() {
+		t.Fatalf("test failure: %s", mt.failMessage())
+	}
 }
 
 const testConfigStr = `

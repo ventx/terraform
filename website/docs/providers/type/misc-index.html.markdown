@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "Misc Providers"
 sidebar_current: "docs-providers-misc"
 description: |-
-  Category for database vendors.
+  Category for miscellaneous vendors.
 ---
 
 # Miscellaneous Providers
@@ -14,6 +14,7 @@ by the vendors and the Terraform community, and are tested by HashiCorp.
 
 ---
 
+[ACME](/docs/providers/acme/index.html)
 
 [Archive](/docs/providers/archive/index.html)
 
@@ -24,6 +25,8 @@ by the vendors and the Terraform community, and are tested by HashiCorp.
 [Ignition](/docs/providers/ignition/index.html)
 
 [Local](/docs/providers/local/index.html)
+
+[Netlify](/docs/providers/netlify/index.html)
 
 [Null](/docs/providers/null/index.html)
 

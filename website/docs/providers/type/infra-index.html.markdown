@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "Infrastructure Software Providers"
 sidebar_current: "docs-providers-infra"
 description: |-
-  Category for standard cloud vendors.
+  Category for infrastructure management vendors.
 ---
 
 # Infrastructure Software Providers
@@ -17,10 +17,11 @@ and are tested by HashiCorp.
 
 ---
 
-
 [Chef](/docs/providers/chef/index.html)
 
 [Consul](/docs/providers/consul/index.html)
+
+[Docker](/docs/providers/docker/index.html)
 
 [Kubernetes](/docs/providers/kubernetes/index.html)
 
@@ -32,12 +33,14 @@ and are tested by HashiCorp.
 
 [Rancher](/docs/providers/rancher/index.html)
 
+[RightScale](/docs/providers/rightscale/index.html)
+
 [Rundeck](/docs/providers/rundeck/index.html)
 
 [Spotinst](/docs/providers/spotinst/index.html)
 
 [Terraform](/docs/providers/terraform/index.html)
 
-[Terraform Enterprise](/docs/providers/terraform-enterprise/index.html)
+[Terraform Enterprise](/docs/providers/tfe/index.html)
 
 [Vault](/docs/providers/vault/index.html)
